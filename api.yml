@@ -1,0 +1,3455 @@
+openapi: 3.0.2
+info:
+  title: Overwatch League API
+  version: 2.1.0
+  description: |
+    The Overwatch League API is the source of truth for official Overwatch League information.
+servers:
+  - url: https://api.overwatchleague.com
+    description: Production API Server
+  - url: https://api-staging.overwatchleague.com
+    description: Staging API Server
+tags:
+  - name: OWL
+    description: Endpoints that work for Overwatch League information
+  - name: OWC
+    description: Endpoints that work for Overwatch Contenders information
+  - name: Teams
+    description: All you can get about OWL Teams
+  - name: All-Star Event
+    description: All-Star Weekend specific endpoints. Includes All-Star Voting endpoints.
+  - name: Components
+    description: Set of miscellaneous components.
+  - name: Debug Tools
+    description: Set of debug tools for QA use. These will not work in production.
+  - name: Deprecated
+    description: Endpoints that should not be used and will be removed in a future update.
+  - name: Authentication
+    description: Endpoints that handle user authentication.
+  - name: Mobile
+    description: Mobile-specific Endpoints.
+  - name: Schedule
+    description: Schedule endpoints.
+  - name: Miscellaneous
+    description: The Catch-all endpoints.
+  - name: Live Experience
+    description: Endpoints that help build out the Live Experience for Overwatch League.
+  - name: News
+    description: News related endpoints
+  - name: Upcoming
+    description: Endpoints that haven't yet been released.
+  - name: MLG
+    description: Endpoints that work directly with MLG Forge.
+  - name: Videos
+    description: Video related endpoints.
+  - name: Sponsorships
+    description: Overwatch League Sponsor information
+  - name: Players
+    description: All you could ever want for OWL Players
+  - name: Standings
+    description: Standings related endpoints
+  - name: Stats
+    description: Stats related endpoints
+  - name: User
+    description: User related endpoints
+x-tagGroups:
+  - name: Overwatch League
+    tags:
+      - OWL
+  - name: Overwatch Contenders
+    tags:
+      - OWC
+components:
+  securitySchemes:
+    JWTAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+paths:
+  /:
+    get:
+      tags:
+        - OWL
+        - OWC
+      summary: Index
+      description: |
+        Unused. Base level route.
+      responses:
+        '200':
+          description: |
+            Default endpoint.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  'the world':
+                    type: string
+              example:
+                'the world': could always use more heroes
+  /allstar/clearVotes:
+    delete:
+      tags:
+        - All-Star Event
+        - OWL
+        - Debug Tools
+      summary: Clear All Votes
+      description:
+        Debug tool to clear all All-Star Voting votes.
+      responses:
+        '200':
+          description: |
+            Deleted all votes.
+          content:
+            application/json:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: Unauthorized
+  /allstar/has-voted/{accountId}:
+    get:
+      tags:
+        - All-Star Event
+        - OWL
+      summary: Check User Vote Eligibility
+      description: |
+        User voting is restricted to one vote per Battle.net account. This ingests a Battle.net Account ID, and responds
+        with the status of whether or not a user has already voted.
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          description: Battle.net Account ID for a specific user
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: User exists and voting status is returned.
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /allstar/leaderboard:
+    get:
+      tags:
+        - OWL
+        - All-Star Event
+      summary: Get Voting Leaderboard
+      description: |
+        Returns the All Star Voting leaders by division by role.
+      responses:
+        '200':
+          description: |
+            All Star Voting leaders by division by role.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  atlantic:
+                    type: array
+                    items:
+                      $ref: 'schemas.yml#/components/schemas/AllStarPlayer'
+                  pacific:
+                    type: array
+                    items:
+                      $ref: 'schemas.yml#/components/schemas/AllStarPlayer'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /allstar/links:
+    get:
+      tags:
+        - OWL
+        - All-Star Event
+      summary: All-Star Event relevant links
+      description: |
+        A listing of links and information useful for the display of the All-Star Event Page.
+      responses:
+        '200':
+          description: |
+            Links and info about All-Star Event.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tickets:
+                    type: string
+                  skins:
+                    type: object
+                    properties:
+                      videoId:
+                        type: string
+                      placeholderImage:
+                        type: string
+                  teams:
+                    type: object
+                    properties:
+                      atlantic:
+                        type: string
+                      pacific:
+                        type: string
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /allstar/player:
+    delete:
+      tags:
+        - All-Star Event
+        - OWL
+        - Debug Tools
+      summary: Delete Player from All-Stars
+      description: |
+        Debug tool to remove a player's votes from the database.
+      parameters:
+        - name: playerId
+          in: query
+          description: |
+            ID of player to be removed.
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Player's votes removed successfully.
+          content:
+            application/json:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: Unauthorized
+  /allstar/sns:
+    get:
+      tags:
+        - All-Star Event
+        - OWL
+      summary: Push/Pull All-Star Votes
+      description: |
+        Allows for vote syncing from China region.
+      responses:
+        '200':
+          description: Successful vote transfer
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Route disabled
+  /allstar/testVote:
+    post:
+      tags:
+        - All-Star Event
+        - OWL
+        - Debug Tools
+      summary: Test Vote Submission
+      description: |
+        Add a test vote to the system without using the website interface.
+      parameters:
+        - name: playerIds
+          in: query
+          description: |
+            List of player IDs
+          schema:
+            type: array
+            items:
+              type: integer
+        - name: accountId
+          in: query
+          description: |
+            Account that is voting
+          schema:
+            type: integer
+      responses:
+        '202':
+          description: |
+            Successful vote test
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: Accepted
+        '401':
+          description: Unauthorized
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: Unauthorized
+  /allstar/vote:
+    post:
+      tags:
+        - All-Star Event
+        - OWL
+      summary: Submit User Vote
+      description: |
+        An encrypted set of data that amounts to a user's Battle.net Account ID and an array of Esports API Player IDs.
+      requestBody:
+        description: User vote information, encrypted
+        content:
+          text/plain:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: Successful submission
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /allstar/voter:
+    get:
+      tags:
+        - All-Star Event
+        - OWL
+        - Debug Tools
+      summary: Get Specific Voter
+      description: |
+        Debug tooling to filter down to a specific voter.
+      parameters:
+        - name: accountId
+          in: query
+          description: |
+            Account ID to filter by.
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: |
+            Listing of specific voter. Expected to be one item, but can be multiple.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    account_id:
+                      type: integer
+                    created_at:
+                      type: string
+        '401':
+          description: Unauthorized
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: Unauthorized
+    delete:
+      tags:
+        - All-Star Event
+        - OWL
+        - Debug Tools
+      summary: Delete A Voter
+      description: |
+        Debug tools to remove a voter from the system to allow for more potential outcomes with less accounts.
+      parameters:
+        - name: accountId
+          in: query
+          description: |
+            Account ID to delete.
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: |
+            Status string of success or failure
+          content:
+            application/json:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: Unauthorized
+  /allstar/voters:
+    get:
+      tags:
+        - All-Star Event
+        - OWL
+        - Debug Tools
+      summary: Get All Voters
+      description: |
+        Debug tooling to see the current voter list.
+      responses:
+        '200':
+          description: |
+            Listing of all voters.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    account_id:
+                      type: integer
+                    created_at:
+                      type: string
+        '401':
+          description: Unauthorized
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: Unauthorized
+  /allstar/votes:
+    get:
+      tags:
+        - All-Star Event
+        - OWL
+        - Debug Tools
+      summary: Get All Votes
+      description: |
+        Debug tooling to see the current vote set.
+      responses:
+        '200':
+          description: |
+            Listing of all player votes.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  global:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        player_id:
+                          type: integer
+                        created_at:
+                          type: string
+                        uuid:
+                          type: string
+                  china:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        player_id:
+                          type: integer
+                        created_at:
+                          type: string
+                        uuid:
+                          type: string
+        '401':
+          description: Unauthorized
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: Unauthorized
+  /auth/bnet/callback:
+    get:
+      tags:
+        - Authentication
+        - OWL
+        - OWC
+        - Mobile
+      summary: Get OAuth Callback
+      description: |
+        OAuth callback url
+      security:
+        - JWTAuth: []
+      responses:
+        '302':
+          description: |
+            Redirect to success state post authentication.
+  /banner:
+    get:
+      tags:
+        - Components
+        - OWL
+      summary: Banner Listing
+      description: |
+        Get Banners for banner components in defined places on the site.
+      parameters:
+        - name: division
+          in: query
+          description: The site this appears on, based on Drupal taxonomy
+          schema:
+            type: string
+        - name: location
+          in: query
+          description: The section of the site this appears on, based on Drupal taxonomy
+          schema:
+            type: string
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: Listing of Banners
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    backgroundColor:
+                      type: string
+                    backgroundImage:
+                      type: string
+                    ctaText:
+                      type: string
+                    ctaUrl:
+                      type: string
+                    logo:
+                      type: string
+                    template:
+                      type: string
+                    text:
+                      type: array
+                      items:
+                        type: string
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /brackets/{stage}:
+    get:
+      tags:
+        - Components
+        - OWC
+      summary: Tournament Bracket Listing
+      description: |
+        View of a tournament stage by region, structured into a bracket.
+      parameters:
+        - name: stage
+          in: path
+          required: true
+          description: Which tournament stage to return
+          schema:
+            type: string
+            enum:
+              - regular
+              - playoffs
+        - name: include
+          in: query
+          description: Way to add other information to the response.
+          schema:
+            type: string
+        - name: trials
+          in: query
+          description: Flag for whether or not to use Contenders Trials teams
+          schema:
+            type: boolean
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: Successful Bracket response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      regions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                            abbreviation:
+                              type: string
+                            tournamentId:
+                              type: integer
+                            groups:
+                              type: object
+                              properties:
+                                bracket:
+                                  type: array
+                                  items:
+                                    $ref: 'schemas.yml#/components/schemas/DeprecatedBracket'
+                                ranks:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      competitor:
+                                        type: object
+                                      placement:
+                                        type: integer
+                                        minimum: 1
+                                      advances:
+                                        type: boolean
+                                      advantage:
+                                        type: integer
+                                      records:
+                                        $ref: 'schemas.yml#/components/schemas/TeamRecord'
+                                matchDetails:
+                                  type: array
+                                  items:
+                                    type: object
+                            ranks:
+                              type: object
+                  meta:
+                    type: object
+                    properties:
+                      strings:
+                        type: object
+                        additionalProperties:
+                          type: string
+        '404':
+          $ref: 'responses.yml#/components/responses/NotFoundError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /broadcast-channels:
+    get:
+      tags:
+        - Schedule
+        - OWL
+      summary: Get All Broadcast Channels
+      description: |
+        Get all metadata of the channels on which Overwatch League can be broadcast
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            Listing of the broadcast channel metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: 'schemas.yml#/components/schemas/BroadcastChannel'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /broadcast-channels/{id}:
+    get:
+      tags:
+        - Schedule
+        - OWL
+      summary: Get A Broadcast Channel
+      description: |
+        Get metadata for a specific channel on which Overwatch League can be broadcast
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: |
+            Broadcast channel id
+          schema:
+            type: integer
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            Listing of the broadcast channel metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: 'schemas.yml#/components/schemas/BroadcastChannel'
+        '404':
+          $ref: 'responses.yml#/components/responses/NotFoundError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /campaign:
+    get:
+      tags:
+        - Components
+        - OWL
+      summary: Get Email Campaign
+      description: |
+        Get the current Overwatch League email campaign.
+      parameters:
+        - name: location
+          in: query
+          description: |
+            Location of the campaign.
+          schema:
+            type: string
+        - name: division
+          in: query
+          description: |
+            Expected subset of campaigns, should always be `owl`.
+          schema:
+            type: string
+            enum:
+              - owl
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            The current campaign information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  body:
+                    type: string
+                  heroImage:
+                    type: string
+                  heroImageAlt:
+                    type: string
+                  campaignId:
+                    type: string
+                  subtitle:
+                    type: string
+                  emailCapture:
+                    type: boolean
+        '404':
+          $ref: 'responses.yml#/components/responses/NotFoundError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /carousel:
+    get:
+      tags:
+        - Components
+        - OWC
+      summary: Carousel Listing
+      description: |
+        Carousel view of featured news/videos
+      parameters:
+        - name: name
+          in: query
+          description: Name/Tag of content
+          schema:
+            type: string
+        - name: community
+          in: query
+          description: Damocles community to return from
+          schema:
+            type: string
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: A listing of news/videos for carousel display
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    title:
+                      type: string
+                    publish:
+                      type: integer
+                    link:
+                      type: string
+                    thumbnail:
+                      type: object
+                      properties:
+                        url:
+                          type: string
+                        title:
+                          type: string
+        '404':
+          $ref: 'responses.yml#/components/responses/NotFoundError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /data/countries:
+    get:
+      tags:
+        - Components
+        - OWL
+      summary: Country List
+      description: |
+        A list of countries with locale codes. Used primarily for Email Capture functionality.
+      responses:
+        '200':
+          description: Successful list of countries.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  countries:
+                    type: array
+                    items:
+                      $ref: 'schemas.yml#/components/schemas/KeyValuePair'
+        '404':
+          $ref: 'responses.yml#/components/responses/NotFoundError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /eligibility-test:
+    get:
+      tags:
+        - Components
+        - OWL
+      description: Strings for Token Eligibility test
+      responses:
+        '200':
+          description: Successful list of strings
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /v2/email:
+    post:
+      tags:
+        - Components
+        - OWL
+      summary: Email Submission
+      description: |
+        Email Submission to the Overwatch League Email Database. Email Database uses an "upsert" functionality which
+        will either add an item to the list or update an existing record, based on the `email` field in the POST body.
+      requestBody:
+        description: An email, address information, and array of teams for newsletter sending.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                country:
+                  type: string
+                email:
+                  type: string
+                locale:
+                  type: string
+                optIn:
+                  type: boolean
+                postalcode:
+                  type: string
+                teams:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 1
+      responses:
+        '200':
+          description: Email added successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /gallery:
+    get:
+      tags:
+        - Components
+        - OWL
+      summary: Get Gallery
+      description: |
+        Get an image gallery.
+      responses:
+        '200':
+          description: An existing gallery and associated imagery.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  galleryName:
+                    type: string
+                  media:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        type:
+                          type: string
+                        thumbOwl1x:
+                          type: string
+                        thumbOwl2x:
+                          type: string
+                        thumbOwl4x:
+                          type: string
+                        image:
+                          type: string
+                        file:
+                          type: string
+                        instagram:
+                          type: string
+                        twitter:
+                          type: string
+                        video:
+                          type: string
+                        tags:
+                          type: array
+                          items:
+                            type: string
+                        featured:
+                          type: boolean
+        '404':
+          $ref: 'responses.yml#/components/responses/NotFoundError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /info:
+    get:
+      tags:
+        - OWL
+        - Miscellaneous
+      summary: Get Miscellaneous Information
+      description: |
+        Miscellaneous information about OWL.
+      responses:
+        '200':
+          description: |
+            Miscellaneous info.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mobileVersion:
+                    type: object
+                    properties:
+                      ios:
+                        type: string
+                      android:
+                        type: string
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /links:
+    get:
+      tags:
+        - Miscellaneous
+        - OWL
+      summary: List of Links
+      description: |
+        Listing of useful links that connect to content available on the Overwatch League website.
+      responses:
+        '200':
+          description: Links and link metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  league:
+                    type: object
+                    properties:
+                        about:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                        allstarVoting:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                            until:
+                              type: integer
+                              minimum: 1
+                        partners:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                        legal:
+                          type: object
+                          properties:
+                            terms:
+                              type: object
+                              properties:
+                                url:
+                                  type: string
+                            privacy:
+                              type: object
+                              properties:
+                                url:
+                                  type: string
+                            cookie:
+                              type: object
+                              properties:
+                                url:
+                                  type: string
+                  external:
+                    type: object
+                    properties:
+                      store:
+                        type: object
+                        properties:
+                          url:
+                            type: string
+                      storeDesktop:
+                        type: object
+                        properties:
+                          url:
+                            type: string
+        '404':
+          $ref: 'responses.yml#/components/responses/NotFoundError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /live-match:
+    get:
+      tags:
+        - Live Experience
+        - OWL
+        - OWC
+      summary: Get Live and Upcoming Matches
+      description: |
+        Gets the current live match and/or the next impending match, based on match start time.
+      parameters:
+        - name: expand
+          in: query
+          description: 'CSV of additional info that can be added to the response. Allowed values: "team.content".'
+          schema:
+            type: string
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: Current live match and/or next match.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      liveMatch:
+                        $ref: 'schemas.yml#/components/schemas/DeprecatedMatch'
+                      nextMatch:
+                        $ref: 'schemas.yml#/components/schemas/DeprecatedMatch'
+                  meta:
+                    type: object
+                    properties:
+                      strings:
+                        type: object
+                        additionalProperties:
+                          type: string
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /loc:
+    get:
+      tags:
+        - Components
+        - OWL
+        - OWC
+      summary: Get all loc strings
+      description: |
+        Endpoint for all localized fixture strings that are used by the website. This allows better administrative
+        controls around how the content is shown to the end user.
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            Returns a multi-dimensional object with strings in the specified locale.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  anyOf:
+                    - type: string
+                    - type: object
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /login:
+    get:
+      tags:
+        - Authentication
+        - OWL
+      summary: User Login
+      description: |
+        User Login through OAuth. This simply redirects to the OAuth Provider with the appropriate callback.
+      parameters:
+        - name: browser
+          in: query
+          description: |
+            Use this flag to specify a browser request vs a mobile request. This changes the callback url.
+          schema:
+            type: boolean
+      responses:
+        '302':
+          description: |
+            Returns a redirect, following correct OAuth authentication procedures.
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /maps:
+    get:
+      tags:
+        - Live Experience
+        - OWL
+        - OWC
+      summary: Get All Map Info
+      description: |
+        Gets all Overwatch Map information relevant to League tournament play for UI display, be it web or mobile app.
+        Note that `name` holds all localization options, so the client is responsible for choosing that value, unlike
+        other endpoints in this API.
+      responses:
+        '200':
+          description: |
+            A listing of all maps and their relevant information
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    guid:
+                      type: string
+                    name:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    gameModes:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          Id:
+                            type: string
+                          Name:
+                            type: string
+                          Key:
+                            type: object
+                            properties:
+                              href:
+                                type: string
+                    id:
+                      type: string
+                    icon:
+                      type: string
+                    thumbnail:
+                      type: string
+                    type:
+                      type: string
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /matches:
+    get:
+      tags:
+        - Live Experience
+        - OWL
+      summary: Get All Matches
+      description: |
+        Get all OWL Matches for the specified season.
+      parameters:
+        - name: expand
+          in: query
+          description: |
+            Add information to the response.
+          schema:
+            type: string
+        - $ref: 'parameters.yml#/components/parameters/season'
+        - $ref: 'parameters.yml#/components/parameters/locale'
+        - $ref: 'parameters.yml#/components/parameters/page'
+        - $ref: 'parameters.yml#/components/parameters/size'
+      responses:
+        '200':
+          description: |
+            List of matches, potentially paginated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: array
+                    items:
+                      $ref: 'schemas.yml#/components/schemas/DeprecatedMatch'
+                  totalElements:
+                    type: integer
+                    minimum: 1
+                  totalPages:
+                    type: integer
+                    minimum: 1
+                  last:
+                    type: boolean
+                  numberOfElements:
+                    type: integer
+                    minimum: 1
+                  size:
+                    type: integer
+                    minimum: 1
+                  sort:
+                    type: string
+                  first:
+                    type: boolean
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /matches/{id}:
+    get:
+      tags:
+        - Live Experience
+        - OWL
+      summary: Get a Specific Match
+      description: |
+        Get a specific OWL Match by Match ID.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: |
+            Esports Match ID
+          schema:
+            type: integer
+        - name: expand
+          in: query
+          description: |
+            Add information to the response.
+          schema:
+            type: string
+        - $ref: 'parameters.yml#/components/parameters/locale'
+        - $ref: 'parameters.yml#/components/parameters/page'
+        - $ref: 'parameters.yml#/components/parameters/size'
+      responses:
+        '200':
+          description: |
+            Full match by ID, with additional information if requested.
+          content:
+            application/json:
+              schema:
+                $ref: 'schemas.yml#/components/schemas/DeprecatedMatch'
+        '404':
+          $ref: 'responses.yml#/components/responses/NotFoundError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /matches/strings:
+    get:
+      tags:
+        - Live Experience
+        - OWL
+      summary: Get Match Detail Page Strings
+      description: |
+        A list of strings used by the Match Details page to fill out fixture text.
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            String Listing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meta:
+                    type: object
+                    additionalProperties:
+                      type: string
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /navbar:
+    get:
+      tags:
+        - Components
+        - OWL
+        - OWC
+      summary: Get Global Navbar
+      description: |
+        Get the Global Navbar and Footer HTML for page display on websites.
+      parameters:
+        - name: ajaxMode
+          in: query
+          description: |
+            Whether or not the navbar should use ajaxMode to build out information. Defaults to `true`.
+          schema:
+            type: boolean
+        - name: country
+          in: query
+          description: |
+            Two letter country code, usually the user's country to correctly set urls, legal information, etc. Defaults
+            to `"US"`.
+          schema:
+            type: string
+        - name: disableLegal
+          in: query
+          description: |
+            Determines whether or not to remove the legal information from the response. Defaults to `false`.
+          schema:
+            type: boolean
+        - name: disableLogin
+          in: query
+          description: |
+            Determines whether or not to remove the login links from the response. Defaults to `false`.
+          schema:
+            type: boolean
+        - name: disableSelector
+          in: query
+          description: |
+            Does something. No idea.
+          schema:
+            type: boolean
+        - name: legalId
+          in: query
+          description: |
+            Game Legal ID to pull correct Legal information for ratings, etc. Defaults to the Overwatch Game ID.
+          schema:
+            type: string
+        - name: lightTheme
+          in: query
+          description: |
+            Toggles the light theme for the Footer. Defaults to `false`.
+          schema:
+            type: boolean
+        - name: mobile
+          in: query
+          description: |
+            Whether or not this should assume a mobile device. Defaults to `false`.
+          schema:
+            type: boolean
+        - name: selector
+          in: query
+          description: |
+            Also confusing, not sure what this is for.
+          schema:
+            type: string
+            enum:
+              - None
+              - Hybrid
+              - Limited
+        - name: style
+          in: query
+          description: |
+            Determines what kind of display to build for the navbar. Defaults to `simple`.
+          schema:
+            type: string
+            enum:
+              - compact
+              - simple
+      responses:
+        '200':
+          description: |
+            Global Navbar and Footer HTML
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  headerHtml:
+                    type: string
+                  footerHtml:
+                    type: string
+                  css:
+                    type: string
+                  js:
+                    type: string
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /news:
+    get:
+      tags:
+        - News
+        - OWL
+        - OWC
+      summary: Get All News
+      description: |
+        Get all news posts that exist for the Overwatch League.
+      parameters:
+        - name: tag
+          in: query
+          description: |
+            What tags to use in the search.
+          schema:
+            type: array
+            items:
+              type: string
+          explode: true
+        - $ref: 'parameters.yml#/components/parameters/locale'
+        - $ref: 'parameters.yml#/components/parameters/page'
+        - $ref: 'parameters.yml#/components/parameters/size'
+      responses:
+        '200':
+          description: |
+            Listing of news posts.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalBlogs:
+                    type: integer
+                  pageSize:
+                    type: integer
+                    minimum: 1
+                  page:
+                    type: integer
+                    minimum: 1
+                  totalPages:
+                    type: integer
+                    minimum: 1
+                  blogs:
+                    type: array
+                    items:
+                      - $ref: 'schemas.yml#/components/schemas/DeprecatedNews'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /news/{id}:
+    get:
+      tags:
+        - News
+        - OWL
+        - OWC
+      summary: Get Specific News Post
+      description: |
+        Get a specific news post for the Overwatch League.
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/newsPostId'
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            Single news post.
+          content:
+            application/json:
+              schema:
+                $ref: 'schemas.yml#/components/schemas/DeprecatedNews'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /v2/news:
+    get:
+      tags:
+        - News
+        - OWL
+        - OWC
+        - Upcoming
+      summary: Get All News Posts
+      description: |
+        Get all news posts for the Overwatch League.
+      parameters:
+        - name: tag
+          in: query
+          description: |
+            What tags to use in the search.
+          schema:
+            type: array
+            items:
+              type: string
+          explode: true
+        - name: sticky
+          in: query
+          description: |
+            Flag to return only sticky posts.
+          schema:
+            type: boolean
+        - $ref: 'parameters.yml#/components/parameters/locale'
+        - $ref: 'parameters.yml#/components/parameters/page'
+        - $ref: 'parameters.yml#/components/parameters/size'
+      responses:
+        '200':
+          description: |
+            Listing of all news posts.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: 'schemas.yml#/components/schemas/NewsPost'
+                  meta:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                      pageSize:
+                        type: integer
+                      page:
+                        type: integer
+                      pageCount:
+                        type: integer
+                      strings:
+                        type: object
+                        additionalProperties:
+                          type: string
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /v2/news/{id}:
+    get:
+      tags:
+        - News
+        - OWL
+        - OWC
+        - Upcoming
+      summary: Get Specific News Post
+      description: |
+        Get a specific news post for the Overwatch League.
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/newsPostId'
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            Specific news post.
+          content:
+            application/json:
+              schema:
+                $ref: 'schemas.yml#/components/schemas/NewsPost'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /page/{id}:
+    get:
+      tags:
+        - MLG
+        - Videos
+        - OWL
+      summary: Get MLG Page
+      description: |
+        Get Page reference from MLG Forge, which can build out a full media page based on data in Forge.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: |
+            Page ID from MLG Forge
+          schema:
+            type: string
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            Page Details from MLG Forge
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  code:
+                    type: integer
+                  data:
+                    $ref: 'schemas.yml#/components/schemas/MLGPage'
+        '404':
+          $ref: 'responses.yml#/components/responses/MLGNotFoundError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /partners:
+    get:
+      tags:
+        - Sponsorships
+        - OWL
+      summary: Get All OWL Partners
+      description: |
+        Get all sponsored partners for the Overwatch League
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            Listing of all OWL partners.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        title:
+                          type: string
+                        logo:
+                          type: string
+                        type:
+                          type: string
+                        description:
+                          type: string
+                        website:
+                          type: string
+                        class:
+                          type: string
+                  meta:
+                    type: object
+                    properties:
+                      strings:
+                        type: object
+                        additionalProperties:
+                          type: string
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /players:
+    get:
+      tags:
+        - Players
+        - OWL
+      summary: Get All OWL Players
+      description: |
+        Get all players in the Overwatch League for the selected season
+      parameters:
+        - name: expand
+          in: query
+          description: |
+            Add information to response. Allowed values: "article","vods","stats","stat.ranks","team",
+            "team.matches.recent","similarPlayers".
+          schema:
+            type: string
+        - name: asg
+          in: query
+          description: |
+            Flag to use All-Star Game information instead of the default info. Defaults to `false`.
+          schema:
+            type: boolean
+        - name: stage_id
+          in: query
+          description: |
+            Determines regular or postseason stats. Defaults to `regular_season`.
+          schema:
+            type: string
+            enum:
+              - regular_season
+              - season_4
+              - postseason
+        - $ref: 'parameters.yml#/components/parameters/season'
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            Listing of players
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: array
+                    items:
+                      $ref: 'schemas.yml#/components/schemas/DeprecatedPlayer'
+                  totalElements:
+                    type: integer
+                    minimum: 0
+                  last:
+                    type: boolean
+                  totalPages:
+                    type: integer
+                    minimum: 1
+                  numberOfElements:
+                    type: integer
+                  size:
+                    type: integer
+                  number:
+                    type: integer
+                  sort:
+                    type: string
+                  first:
+                    type: boolean
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /players/{id}:
+    get:
+      tags:
+        - Players
+        - OWL
+      summary: Get Specific Player
+      description: |
+        Get a specific player in the Overwatch League
+      parameters:
+        - name: expand
+          in: query
+          description: |
+            Add information to response. Allowed values: "article","vods","stats","stat.ranks","team",
+            "team.matches.recent","similarPlayers".
+          schema:
+            type: string
+        - $ref: 'parameters.yml#/components/parameters/playerId'
+        - $ref: 'parameters.yml#/components/parameters/season'
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            A specific Player's information.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      player:
+                        $ref: 'schemas.yml#/components/schemas/DeprecatedPlayer'
+                  meta:
+                    type: object
+        '404':
+          $ref: 'responses.yml#/components/responses/NotFoundError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /players/mvp:
+    get:
+      tags:
+        - Players
+        - OWL
+      summary: Get MVP Players
+      description: |
+        Get the top 5 players specific to the MVP program.
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            Listing of the top 5 voted players for the MVP program.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'schemas.yml#/components/schemas/DeprecatedPlayer'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /playlist/{id}:
+    get:
+      tags:
+        - MLG
+        - OWL
+      summary: Get MLG Playlist
+      description: |
+        Get a playlist of videos from MLG Forge.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: |
+            Unique identifier for a playlist in the MLG Forge system.
+          schema:
+            type: string
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            Playlist from MLG Forge
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  code:
+                    type: integer
+                  _metadata:
+                    type: object
+                    properties:
+                      total_count:
+                        type: integer
+                      page:
+                        type: integer
+                      per_page:
+                        type: integer
+                      page_count:
+                        type: integer
+                  data:
+                    $ref: 'schemas.yml#/components/schemas/MLGPlaylist'
+        '404':
+          $ref: 'responses.yml#/components/responses/MLGNotFoundError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /playoffs:
+    get:
+      tags:
+        - OWL
+      summary: Get Playoff Details
+      description: |
+        Get all information relevant to Playoffs page display
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            Playoff details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cinchedSeeds:
+                    type: array
+                    items:
+                      $ref: 'schemas.yml#/components/schemas/Team'
+                  placementAwards:
+                    type: array
+                    items:
+                      type: string
+                  series:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        title:
+                          type: string
+                        stageId:
+                          type: integer
+                        matchSeries:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                              name:
+                                type: string
+                              bracketId:
+                                type: integer
+                              bestOf:
+                                type: integer
+                              scores:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    value:
+                                      type: integer
+                              teams:
+                                type: array
+                                items:
+                                  $ref: 'schemas.yml#/components/schemas/Team'
+                              matches:
+                                type: array
+                                items:
+                                  $ref: 'schemas.yml#/components/schemas/DeprecatedMatch'
+                  schedule:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        title:
+                          type: string
+                        stageId:
+                          type: integer
+                        matches:
+                          type: array
+                          items:
+                            $ref: 'schemas.yml#/components/schemas/DeprecatedMatch'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /push/{platform}/{deviceToken}:
+    put:
+      tags:
+        - Mobile
+        - OWL
+      summary: Register Push Notifications
+      description: |
+        Allow a user to register for Push Notifications from Overwatch League.
+      parameters:
+        - name: platform
+          in: path
+          required: true
+          description: |
+            Defines the kind of device. Allowed values: "Android","iOS"
+          schema:
+            type: string
+            enum:
+              - Android
+              - iOS
+        - name: deviceToken
+          in: path
+          required: true
+          description: |
+            Device specific token to use for Push Notification Registration
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/vnd.blz.push-v3+json:
+            schema:
+              type: object
+              properties:
+                locale:
+                  type: string
+                applicationRegion:
+                  type: string
+                attributes:
+                  type: object
+                account:
+                  type: object
+                capabilities:
+                  type: object
+      responses:
+        '200':
+          description: |
+            Successful push registration.
+          content:
+            application/vnd.blz.push-v3+json:
+              schema:
+                type: object
+                properties:
+                  endpoint:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      bucket:
+                        type: integer
+                      locale:
+                        type: string
+                      region:
+                        type: string
+                      platformToken:
+                        type: string
+                  account:
+                    type: object
+                    properties:
+                      endpointId:
+                        type: integer
+                      accountRegion:
+                        type: string
+                      accountId:
+                        type: integer
+                  app-account:
+                    type: object
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+    delete:
+      tags:
+        - Mobile
+        - OWL
+      summary: Remove Push Notification
+      description: |
+        Remove a Push notification for a specific device
+      parameters:
+        - name: platform
+          in: path
+          required: true
+          description: |
+            Defines the kind of device. Allowed values: "Android","iOS"
+          schema:
+            type: string
+            enum:
+              - Android
+              - iOS
+        - name: deviceToken
+          in: path
+          required: true
+          description: |
+            Device specific token to use for Push Notification Registration
+          schema:
+            type: string
+      responses:
+        '204':
+          description: |
+            Successful removal. No body.
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /push/{platform}/{deviceToken}/bind:
+    put:
+      tags:
+        - Mobile
+        - OWL
+      summary: Register Push Notifications
+      description: |
+        Allow a user to register for Push Notifications from Overwatch League.
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: platform
+          in: path
+          required: true
+          description: |
+            Defines the kind of device. Allowed values: "Android","iOS"
+          schema:
+            type: string
+            enum:
+              - Android
+              - iOS
+        - name: deviceToken
+          in: path
+          required: true
+          description: |
+            Device specific token to use for Push Notification Registration
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/vnd.blz.push-v3+json:
+            schema:
+              type: object
+              properties:
+                accountRegion:
+                  type: string
+                accountId:
+                  type: integer
+                appAccountId:
+                  type: string
+      responses:
+        '200':
+          description: |
+            Successful relinking of a Push Notification
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /push/register:
+    post:
+      tags:
+        - Mobile
+        - OWL
+      summary: Register Push Notifications
+      description: |
+        Allow a user to register for Push Notifications from Overwatch League.
+      security:
+        - JWTAuth: []
+      requestBody:
+        content:
+          application/vnd.blz.push-v3+json:
+            schema:
+              type: object
+              properties:
+                account:
+                  type: object
+                  properties:
+                    accountRegion:
+                      type: string
+                    accountId:
+                      type: integer
+                    appAccountId:
+                      type: string
+                endpoint:
+                  type: object
+                  properties:
+                    locale:
+                      type: string
+                    applicationRegion:
+                      type: string
+                    attributes:
+                      type: object
+                    account:
+                      type: object
+                    capabilities:
+                      type: object
+                platform:
+                  type: string
+                device-token:
+                  type: string
+      responses:
+        '201':
+          description: |
+            Successful creation and binding
+          content:
+            application/vnd.blz.push-v3+json:
+              schema:
+                type: object
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /rankings:
+    get:
+      tags:
+        - Standings
+        - OWL
+        - OWC
+        - Deprecated
+      summary: Get OWL Rankings
+      description: |
+        A rundown of OWL teams in ranking order.
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/locale'
+        - $ref: 'parameters.yml#/components/parameters/page'
+        - $ref: 'parameters.yml#/components/parameters/size'
+      responses:
+        '200':
+          description: |
+            List of Overwatch League Teams in ranking order.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: array
+                    items:
+                      $ref: 'schemas.yml#/components/schemas/DeprecatedCompetitorWithRecord'
+                  comparisons:
+                    type: array
+                    items:
+                      type: string
+                  totalMatches:
+                    type: integer
+                  matchesConcluded:
+                    type: integer
+                  playoffCutoff:
+                    type: string
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /rankings/grand-finals:
+    get:
+      tags:
+        - Standings
+        - OWL
+        - OWC
+        - Deprecated
+      summary: Get OWL Grand Finals Rankings
+      description: |
+        Get OWL teams in ranking order for Grand Finals.
+      deprecated: true
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            Listing of OWL Teams in Grand Finals Rank order
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /regions:
+    get:
+      tags:
+        - OWC
+      summary: Get OWC Regions
+      description: |
+        Listing of all regions that play in Overwatch Contenders
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            All Overwatch Contenders Regions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        abbreviation:
+                          type: string
+                        tournamentId:
+                          type: integer
+                        trials:
+                          type: object
+                          properties:
+                            tournamentId:
+                              type: integer
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /schedule:
+    get:
+      tags:
+        - Schedule
+        - OWL
+        - OWC
+      summary: Get Full Season Schedule
+      description: |
+        Listing of the entire schedule for a full season of Overwatch League.
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/season'
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            Full Schedule
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      startDate:
+                        type: string
+                      endDate:
+                        type: string
+                      endDateMS:
+                        type: integer
+                      seriesId:
+                        type: integer
+                      stages:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            slug:
+                              type: string
+                            enabled:
+                              type: boolean
+                            name:
+                              type: string
+                            tournaments:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: integer
+                                  type:
+                                    type: string
+                            matches:
+                              type: array
+                              items:
+                                $ref: 'schemas.yml#/components/schemas/DeprecatedMatch'
+                            weeks:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: integer
+                                  startDate:
+                                    type: integer
+                                  endDate:
+                                    type: integer
+                                  name:
+                                    type: string
+                                  matches:
+                                    type: array
+                                    items:
+                                      $ref: 'schemas.yml#/components/schemas/DeprecatedMatch'
+                                  events:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        type:
+                                          type: string
+                                        data:
+                                          type: object
+                                          properties:
+                                            titles:
+                                              type: array
+                                              items:
+                                                type: string
+                                            locationText:
+                                              type: string
+                                            locationUrl:
+                                              type: string
+                                            descriptionUrl:
+                                              type: string
+                                            imageUrl:
+                                              type: string
+                                            hostTeamId:
+                                              type: string
+                                            hostTeamColorUsage:
+                                              type: string
+                                              enum:
+                                                - PRIMARY
+                                                - SECONDARY
+                                            partner:
+                                              type: object
+                                              properties:
+                                                title:
+                                                  type: string
+                                                website:
+                                                  type: string
+                  meta:
+                    type: object
+                    properties:
+                      strings:
+                        type: object
+                        additionalProperties:
+                          type: string
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /seasons:
+    get:
+      tags:
+        - OWC
+      summary: Get Contenders Seasons
+      description: |
+        Get all of the Overwatch Contenders seasons
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            Listing of all Overwatch Contenders seasons
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    eventId:
+                      type: integer
+                    scheduleId:
+                      type: integer
+                    publishDate:
+                      type: string
+                    startDate:
+                      type: string
+                    seriesId:
+                      type: string
+                    id:
+                      type: string
+                    year:
+                      type: integer
+                    number:
+                      type: integer
+                    events:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          eventId:
+                            type: integer
+                          seasonId:
+                            type: string
+                          scheduleId:
+                            type: integer
+                          publishDate:
+                            type: string
+                          startDate:
+                            type: string
+                          endDate:
+                            type: string
+                          seriesId:
+                            type: string
+                          type:
+                            type: string
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /social:
+    get:
+      tags:
+        - OWL
+      summary: Get OWL Social Accounts
+      description: |
+        Get all Overwatch League Social Media Accounts
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            Listing of all Overwatch League Social Media Accounts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: object
+                  platforms:
+                    type: array
+                    items:
+                      type: string
+                  analytics:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      placement:
+                        type: string
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /streams:
+    get:
+      tags:
+        - Live Experience
+        - OWL
+        - Deprecated
+      summary: Get Stream Status
+      description: |
+        Get the MLG Stream status for Overwatch League
+      deprecated: true
+      responses:
+        '200':
+          description: |
+            MLG Stream status for Overwatch League
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  slug:
+                    type: string
+                  subtitle:
+                    type: string
+                  description:
+                    type: string
+                  stream_name:
+                    type: string
+                  is_hidden:
+                    type: boolean
+                  image_16_9_small:
+                    type: string
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                  status:
+                    type: integer
+                  channel_id:
+                    type: integer
+                  cdn:
+                    type: string
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /v2/streams:
+    get:
+      tags:
+        - Live Experience
+        - OWL
+        - OWC
+      summary: Get Stream Status
+      description: |
+        Get Twitch stream status
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            Twitch Stream Status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  platform:
+                    type: string
+                  embedUrl:
+                    type: string
+                  status:
+                    type: integer
+                  streamType:
+                    type: string
+                  attributes:
+                    type: object
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /v2/standings:
+    get:
+      tags:
+        - Standings
+        - OWL
+        - OWC
+      summary: Get Standings
+      description: |
+        Get standings for OWL or OWC for the specified season
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/locale'
+        - $ref: 'parameters.yml#/components/parameters/season'
+      responses:
+        '200':
+          description: |
+            Standings for the specified season. Each record will have either `divLeader` or `wildcard`, not both.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        divisionId:
+                          type: integer
+                        name:
+                          type: string
+                        abbreviatedName:
+                          type: string
+                        logo:
+                          type: object
+                          additionalProperties:
+                            $ref: 'schemas.yml#/components/schemas/TeamLogo'
+                        colors:
+                          type: object
+                          additionalProperties:
+                            $ref: 'schemas.yml#/components/schemas/TeamColor'
+                        league:
+                          $ref: 'schemas.yml#/components/schemas/TeamRecordWithPlacement'
+                        stages:
+                          type: object
+                          additionalProperties:
+                            $ref: 'schemas.yml#/components/schemas/TeamRecordWithStagePlayoffs'
+                        preseason:
+                          $ref: 'schemas.yml#/components/schemas/TeamRecordWithPlacement'
+                        divLeader:
+                          $ref: 'schemas.yml#/components/schemas/TeamRecordWithPlacement'
+                        wildcard:
+                          $ref: 'schemas.yml#/components/schemas/TeamRecordWithPlacement'
+                  meta:
+                    type: object
+                    properties:
+                      divisions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            string:
+                              type: string
+                            name:
+                              type: string
+                            abbrev:
+                              type: string
+                      strings:
+                        type: object
+                        additionalProperties:
+                          type: string
+                      separators:
+                        type: object
+                        properties:
+                          stages:
+                            type: object
+                            additionalProperties:
+                              type: integer
+                          stage:
+                            type: integer
+                          wildcard:
+                            type: integer
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /stats/matches/{matchId}/maps/{mapNumber}:
+    get:
+      tags:
+        - Stats
+        - OWL
+      summary: Get Player Stats by Map
+      description: |
+        Get Player-specific stats for a Map within a Match of Overwatch League.
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          description: |
+            Esports ID for a Match
+          schema:
+            type: integer
+        - name: mapNumber
+          in: path
+          required: true
+          description: |
+            Map x of y for the selected Match
+          schema:
+            type: integer
+            minimum: 1
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            Map specific stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  game_id:
+                    type: string
+                  match_id:
+                    type: string
+                  tournament_id:
+                    type: string
+                  tournament_type:
+                    type: string
+                  season_id:
+                    type: string
+                  game_number:
+                    type: integer
+                  map_id:
+                    type: string
+                  map_type:
+                    type: string
+                  esports_tournament_id:
+                    type: integer
+                  esports_match_id:
+                    type: integer
+                  teams:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        esports_team_id:
+                          type: integer
+                        stats:
+                          type: array
+                          items:
+                            $ref: 'schemas.yml#/components/schemas/StatExpanded'
+                        players:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              esports_player_id:
+                                type: integer
+                              stats:
+                                type: array
+                                items:
+                                  $ref: 'schemas.yml#/components/schemas/StatExpanded'
+                              heroes:
+                                type: array
+                                items:
+                                  $ref: 'schemas.yml#/components/schemas/HeroStatExpanded'
+                  stats:
+                    type: array
+                    items:
+                      $ref: 'schemas.yml#/components/schemas/StatExpanded'
+        '404':
+          $ref: 'responses.yml#/components/responses/NotFoundError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /stats/players:
+    get:
+      tags:
+        - Stats
+        - OWL
+      summary: Get Player Stats
+      description: |
+        Get a listing of stats for all players by season
+      parameters:
+        - name: stage_id
+          in: query
+          description: |
+            Filter returned data by regular season or postseason
+          schema:
+            type: string
+            enum:
+              - regular_season
+              - postseason
+        - $ref: 'parameters.yml#/components/parameters/locale'
+        - $ref: 'parameters.yml#/components/parameters/seasonId'
+      responses:
+        '200':
+          description: |
+            Listing of players and their stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        playerId:
+                          type: integer
+                        teamId:
+                          type: integer
+                        role:
+                          type: string
+                        name:
+                          type: string
+                        team:
+                          type: string
+                        eliminations_avg_per_10m:
+                          type: number
+                        deaths_avg_per_10m:
+                          type: number
+                        hero_damage_avg_per_10m:
+                          type: number
+                        healing_avg_per_10m:
+                          type: number
+                        ultimates_earned_avg_per_10m:
+                          type: number
+                        final_blows_avg_per_10m:
+                          type: number
+                        time_played_total:
+                          type: number
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /tags:
+    get:
+      tags:
+        - Components
+        - OWL
+      summary: Get Global Tags
+      description: |
+        Returns a list of all tags that are available throughout the Overwatch League ecosystem.
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            Tag list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  labels:
+                    type: object
+                  news:
+                    type: object
+                    properties:
+                      tags:
+                        type: array
+                        items:
+                          type: string
+                      keywords:
+                        type: array
+                        items:
+                          type: string
+                  vods:
+                    type: object
+                    properties:
+                      tags:
+                        type: array
+                        items:
+                          type: string
+                  esports:
+                    type: object
+                    properties:
+                      tags:
+                        type: array
+                        items:
+                          type: string
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /v2/teams:
+    get:
+      tags:
+        - Teams
+        - OWL
+        - OWC
+      summary: Get all OWL Teams
+      description: |
+        Listing of all OWL Teams with players and social media accounts.
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/locale'
+        - $ref: 'parameters.yml#/components/parameters/seasonId'
+      responses:
+        '200':
+          description: All OWL Teams
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: 'schemas.yml#/components/schemas/Team'
+                  meta:
+                    $ref: 'schemas.yml#/components/schemas/Pagination'
+        '404':
+          $ref: 'responses.yml#/components/responses/NotFoundError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /v2/teams/{id}:
+    get:
+      tags:
+        - Teams
+        - OWL
+        - OWC
+      summary: Get a single Team
+      description: |
+        Returns a single Team, including standings information.
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/teamId'
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: Single OWL Team
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: 'schemas.yml#/components/schemas/TeamDetail'
+                  meta:
+                    type: object
+                    properties:
+                      strings:
+                        type: object
+                        additionalProperties:
+                          type: string
+        '404':
+          $ref: 'responses.yml#/components/responses/NotFoundError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /user:
+    get:
+      tags:
+        - User
+        - OWL
+      summary: Get User Profile
+      description: |
+        Gets the profile of the user, identified by authorization header
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: |
+            User Profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      battletag:
+                        type: string
+        '403':
+          $ref: 'responses.yml#/components/responses/ForbiddenError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /user/favorites:
+    get:
+      tags:
+        - User
+        - OWL
+      summary: Get User's Favorites
+      description: |
+        Get a listing of all of the favorites of the user identified by the authorization header
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: |
+            Listing of favorites
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  account_id:
+                    type: integer
+                  favorites:
+                    type: array
+                    items:
+                      $ref: 'schemas.yml#/components/schemas/UserFavorite'
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                  _meta:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      pagesize:
+                        type: integer
+                      total:
+                        type: integer
+                      lastpage:
+                        type: integer
+        '403':
+          $ref: 'responses.yml#/components/responses/ForbiddenError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+    post:
+      tags:
+        - User
+        - OWL
+      summary: Set User Favorites
+      description: |
+        Update the User Favorites as needed. This is an "upsert" kind of functionality.
+      security:
+        - JWTAuth: []
+      requestBody:
+        description: |
+          Favorites to add/modify in the system
+        content:
+          application/json:
+            schema:
+              $ref: 'schemas.yml#/components/schemas/UserFavorite'
+      responses:
+        '200':
+          description: |
+            Returned Request body to confirm submission
+          content:
+            application/json:
+              schema:
+                $ref: 'schemas.yml#/components/schemas/UserFavorite'
+        '403':
+          $ref: 'responses.yml#/components/responses/ForbiddenError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /user/favorites/order:
+    post:
+      tags:
+        - User
+        - OWL
+      summary: Set User Favorites Order
+      description: |
+        Set the order of the user's favorites
+      security:
+        - JWTAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: |
+            Return of ordered favorites
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ordered:
+                    type: array
+                    items:
+                      $ref: 'schemas.yml#/components/schemas/UserFavorite'
+        '403':
+          $ref: 'responses.yml#/components/responses/ForbiddenError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /user/favorites/{id}:
+    delete:
+      tags:
+        - User
+        - OWL
+      summary: Unfavorite
+      description: |
+        Remove a user's favorite by id.
+      security:
+        - JWTAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: |
+            ID of Favorite to remove from user.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: |
+            Favorite removed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: array
+                    items:
+                      $ref: 'schemas.yml#/components/schemas/UserFavorite'
+        '403':
+          $ref: 'responses.yml#/components/responses/ForbiddenError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /videos:
+    get:
+      tags:
+        - Videos
+        - OWC
+      summary: Get YouTube Videos
+      description: |
+        Get videos from a YouTube playlist. Playlist is defined on the server.
+      responses:
+        '200':
+          description: |
+            Videos from a predefined YouTube Playlist.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    title:
+                      type: string
+                    description:
+                      type: string
+                    thumbnail:
+                      type: object
+                      properties:
+                        url:
+                          type: string
+                        title:
+                          type: string
+                    link:
+                      type: string
+                    published:
+                      type: string
+                    order:
+                      type: integer
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /vods:
+    get:
+      tags:
+        - Videos
+        - MLG
+        - OWL
+      summary: Get Vods
+      description: |
+        Get Overwatch League Vods from MLG Forge
+      parameters:
+        - name: tag
+          in: query
+          description: |
+            A tag to filter the videos. Can be used multiple times to filter more granularly.
+          schema:
+            type: array
+            items:
+              type: string
+        - name: per_page
+          in: query
+          description: |
+            Number of items in the response.
+          schema:
+            type: integer
+        - $ref: 'parameters.yml#/components/parameters/locale'
+        - $ref: 'parameters.yml#/components/parameters/page'
+      responses:
+        '200':
+          description: |
+            Listing of Vods, filtered by given tags
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  code:
+                    type: integer
+                  _metadata:
+                    type: object
+                    properties:
+                      total_count:
+                        type: integer
+                      page:
+                        type: integer
+                      per_page:
+                        type: integer
+                      page_count:
+                        type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: 'schemas.yml#/components/schemas/DeprecatedVideo'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /vods/{id}:
+    get:
+      tags:
+        - Videos
+        - MLG
+        - OWL
+      summary: Get Specific Video
+      description: |
+        Get a specific Video/VOD from MLG Forge by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: |
+            MLG Forge ID of the video
+          schema:
+            type: string
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            Single Video from MLG Forge
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  code:
+                    type: integer
+                  data:
+                    $ref: 'schemas.yml#/components/schemas/DeprecatedVideo'
+        '404':
+          $ref: 'responses.yml#/components/responses/MLGNotFoundError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /winners:
+    get:
+      tags:
+        - OWC
+      summary: Get Season Winners
+      description: |
+        Get Overwatch Contenders Season Winners by season
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            Listing of Season winners by region by season
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  region:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        abbreviation:
+                          type: string
+                        tournamentId:
+                          type: integer
+                        winner:
+                          $ref: 'schemas.yml#/components/schemas/DeprecatedCompetitorWithRecord'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /about:
+    get:
+      tags:
+        - Deprecated
+        - OWL
+      summary: Miscellaneous List of Links
+      description: |
+        Static urls to web pages that display information, such as the About page and legal documents.
+      deprecated: true
+      responses:
+        '200':
+          description: Successful URL grabbing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  aboutUrl:
+                    type: string
+                  legalUrl:
+                    type: string
+                  termsUrl:
+                    type: string
+                  privacyUrl:
+                    type: string
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /allstar/game-modes:
+    get:
+      tags:
+        - Deprecated
+        - OWL
+      summary: All-Star Game Mode List
+      description: |
+        Game modes used in 2018 All-Star Game
+      deprecated: true
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: All of the different games and game modes played in 2018 All-Star Game
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: 'schemas.yml#/components/schemas/DeprecatedAllStarGameMode'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /email:
+    post:
+      tags:
+        - Components
+        - OWL
+        - Deprecated
+      summary: Email Submission
+      description: |
+        Email Submission to the Overwatch League Email Database. Email Database uses an "upsert" functionality which
+        will either add an item to the list or update an existing record, based on the `email` field in the POST body.
+      deprecated: true
+      requestBody:
+        description: An email and a bitmap of team flags for an email to be added to.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                optIn:
+                  type: boolean
+                teamFavorites:
+                  type: integer
+      responses:
+        '200':
+          description: Email added successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /standings:
+    get:
+      tags:
+        - Standings
+        - OWL
+        - OWC
+        - Deprecated
+      summary: Get Standings
+      description: |
+        Get Standings for the specified season of Overwatch League
+      deprecated: true
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/locale'
+        - $ref: 'parameters.yml#/components/parameters/season'
+      responses:
+        '200':
+          description: |
+            Listing of Teams in Ranking order, with other rank information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  owl_divisions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        string:
+                          type: string
+                        name:
+                          type: string
+                        abbrev:
+                          type: string
+                  playoff_separators:
+                    type: object
+                    properties:
+                      wildcard:
+                        type: string
+                      stage:
+                        type: string
+                  season:
+                    type: object
+                    properties:
+                      division:
+                        type: object
+                        properties:
+                          '79':
+                            type: array
+                            items:
+                              $ref: 'schemas.yml#/components/schemas/DeprecatedTeamWithRecord'
+                          '80':
+                            type: array
+                            items:
+                              $ref: 'schemas.yml#/components/schemas/DeprecatedTeamWithRecord'
+                      wildcard:
+                        type: object
+                        properties:
+                          leader:
+                            type: array
+                            items:
+                              $ref: 'schemas.yml#/components/schemas/DeprecatedTeamWithRecord'
+                          wildcard:
+                            type: array
+                            items:
+                              $ref: 'schemas.yml#/components/schemas/DeprecatedTeamWithRecord'
+                  stages:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        teams:
+                          type: array
+                          items:
+                            $ref: 'schemas.yml#/components/schemas/DeprecatedTeamWithRecord'
+                  ranks:
+                    type: object
+                    properties:
+                      content:
+                        type: array
+                        items:
+                          $ref: 'schemas.yml#/components/schemas/DeprecatedCompetitorWithRecord'
+                      comparisons:
+                        type: array
+                        items:
+                          type: string
+                      totalMatches:
+                        type: object
+                      matchesConcluded:
+                        type: object
+                      playoffCutoff:
+                        type: array
+                        items:
+                          type: string
+                  meta:
+                    type: object
+                    properties:
+                      strings:
+                        type: object
+                        additionalProperties:
+                          type: string
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /teams:
+    get:
+      tags:
+        - Deprecated
+        - OWL
+        - OWC
+      summary: Get all Teams
+      description: |
+        Returns a listing of all Teams in the environment specified Esports Division, defaulting to the Overwatch League
+        division.
+      deprecated: true
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/locale'
+        - name: expand
+          in: query
+          description: 'CSV of additional info that can be added to the response. Allowed values: "team.content".'
+          schema:
+            type: string
+      responses:
+        '200':
+          description: All OWL Teams
+          content:
+            application/json:
+              schema:
+                $ref: 'schemas.yml#/components/schemas/DeprecatedTeam'
+        '404':
+          $ref: 'responses.yml#/components/responses/NotFoundError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /teams/content:
+    get:
+      tags:
+        - Teams
+        - OWL
+      summary: Get All Team Content
+      description: |
+        An addendum of Team information to flesh out branding information.
+      deprecated: true
+      responses:
+        '200':
+          description: |
+            A listing of all Team addendum information, including brand logos and brand colors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'schemas.yml#/components/schemas/DeprecatedTeamContent'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /teams/{id}:
+    get:
+      tags:
+        - Deprecated
+        - OWL
+        - OWC
+      summary: Get a single Team
+      description: |
+        Returns a single Team that is within the environment defined Esports Division, defaulting to Overwatch League.
+      deprecated: true
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/teamId'
+        - $ref: 'parameters.yml#/components/parameters/locale'
+        - name: expand
+          in: query
+          description: 'CSV of additional info that can be added to the response. Allowed values: "team.content".'
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Single OWL Team
+          content:
+            application/json:
+              schema:
+                $ref: 'schemas.yml#/components/schemas/DeprecatedTeamDetail'
+        '404':
+          $ref: 'responses.yml#/components/responses/NotFoundError'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /teams/{id}/content:
+    get:
+      tags:
+        - Teams
+        - OWL
+      summary: Get Specific Team Content
+      description: |
+        An addendum of Team information to flesh out branding information.
+      deprecated: true
+      parameters:
+        - $ref: 'parameters.yml#/components/parameters/teamId'
+        - $ref: 'parameters.yml#/components/parameters/locale'
+      responses:
+        '200':
+          description: |
+            A listing of one Team's addendum information, including brand logos and brand colors
+          content:
+            application/json:
+              schema:
+                $ref: 'schemas.yml#/components/schemas/DeprecatedTeamContent'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
+  /search:
+    get:
+      tags:
+        - OWL
+      summary: Get Searchable Content
+      description: |
+        Get OWL-related content metadata, that can be used for e.g. site search.
+      responses:
+        '200':
+          description:
+          content:
+            application/json:
+              schema:
+                $ref: 'schemas.yml#/components/schemas/Search'
+        '500':
+          $ref: 'responses.yml#/components/responses/InternalServerError'
